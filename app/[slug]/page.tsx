@@ -1,6 +1,19 @@
+import { createElement, Suspense } from "react";
 import { notFound } from "next/navigation";
-import { Sun } from "lucide-react";
-import { locations, getLocationBySlug } from "../data/locations";
+import {
+  locations,
+  getLocationBySlug,
+  type Location,
+} from "../data/locations";
+import { getWeather } from "../actions/actions";
+import { getWeatherIcon } from "../lib/weatherIcons";
+import { getWeatherDescription } from "../lib/weatherDescriptions";
+import {
+  getCurrentTimeInTimezone,
+  formatDate,
+  getDayName,
+  isNightTime,
+} from "../lib/utils";
 import { DaysListItem } from "../components/DaysListItem";
 
 export function generateStaticParams() {
@@ -9,21 +22,112 @@ export function generateStaticParams() {
   }));
 }
 
-const days = [
-  { day: "Today", maxTemp: 22, minTemp: 18 },
-  { day: "Thursday", maxTemp: 22, minTemp: 18 },
-  { day: "Friday", maxTemp: 22, minTemp: 18 },
-  { day: "Saturday", maxTemp: 22, minTemp: 18 },
-  { day: "Sunday", maxTemp: 22, minTemp: 18 },
-  { day: "Monday", maxTemp: 22, minTemp: 18 },
-  { day: "Tuesday", maxTemp: 22, minTemp: 18 },
-];
-
 interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
-export default async function LocationPage({ params }: PageProps) {
+async function WeatherForecast({ location }: { location: Location }) {
+  const weather = await getWeather(location.lat, location.lon);
+  const todayForecast = weather.daily[0];
+  const icon = getWeatherIcon(weather.current.weatherCode);
+  const description = getWeatherDescription(weather.current.weatherCode);
+  const isNight = isNightTime(
+    weather.current.timezone,
+    weather.current.sunrise,
+    weather.current.sunset
+  );
+
+  return (
+    <div className="flex flex-col gap-16 py-8">
+      <header className="flex flex-col gap-8">
+        <section className="flex flex-col">
+          <h2 className="text-xl font-semibold">{location.name}</h2>
+          <p className="text-base text-muted-foreground">
+            {formatDate(todayForecast.date)}{" "}
+            {getCurrentTimeInTimezone(weather.current.timezone)}
+          </p>
+        </section>
+
+        <section className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
+            <span className="text-6xl font-light">
+              {weather.current.temperature}°
+            </span>
+            <p className="text-base text-muted-foreground">{description}</p>
+          </div>
+          {createElement(icon, {
+            className: "size-20 text-muted-foreground/70 stroke-1",
+            isNight,
+          })}
+        </section>
+      </header>
+
+      <section>
+        <h2 className="text-base font-semibold mb-4">7-Day Forecast</h2>
+        <ul className="flex flex-col">
+          {weather.daily.map((day, index) => {
+            const dayIcon = getWeatherIcon(day.weatherCode);
+            return (
+              <DaysListItem
+                key={day.date}
+                day={getDayName(day.date, index)}
+                maxTemp={day.maxTemp}
+                minTemp={day.minTemp}
+                Icon={dayIcon}
+              />
+            );
+          })}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function WeatherPlaceholder({ name }: { name?: string }) {
+  return (
+    <div
+      className="flex flex-col gap-16 py-8"
+      aria-busy="true"
+      role="status"
+    >
+      <span className="sr-only">Loading weather forecast...</span>
+      <header className="flex flex-col gap-8">
+        <section className="flex flex-col gap-2">
+          {name ? (
+            <h2 className="text-xl font-semibold">{name}</h2>
+          ) : (
+            <div className="h-7 w-32 animate-pulse rounded bg-muted" />
+          )}
+          <div className="h-5 w-48 animate-pulse rounded bg-muted" />
+        </section>
+        <section className="flex justify-between items-center">
+          <div className="flex flex-col gap-2">
+            <div className="h-16 w-28 animate-pulse rounded bg-muted" />
+            <div className="h-6 w-36 animate-pulse rounded bg-muted" />
+          </div>
+          <div className="size-20 animate-pulse rounded-full bg-muted" />
+        </section>
+      </header>
+      <section>
+        <h2 className="text-base font-semibold mb-4">7-Day Forecast</h2>
+        <ul className="flex flex-col">
+          {Array.from({ length: 7 }, (_, index) => (
+            <li
+              key={index}
+              className="flex items-center py-4 gap-4 border-t border-border"
+            >
+              <div className="h-5 w-24 animate-pulse rounded bg-muted" />
+              <div className="h-5 w-5 animate-pulse rounded-full bg-muted ml-auto" />
+              <div className="h-5 w-16 animate-pulse rounded bg-muted" />
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+async function LocationContent({ params }: PageProps) {
   const { slug } = await params;
   const location = getLocationBySlug(slug);
 
@@ -32,35 +136,16 @@ export default async function LocationPage({ params }: PageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-16 py-8">
-      <header className="flex flex-col gap-8">
-        <section className="flex flex-col">
-          <h2 className="text-xl font-semibold">{location.name}</h2>
-          <p className="text-base text-muted-foreground">1 January 2025</p>
-        </section>
+    <Suspense fallback={<WeatherPlaceholder name={location.name} />}>
+      <WeatherForecast location={location} />
+    </Suspense>
+  );
+}
 
-        <section className="flex justify-between items-center">
-          <div className="flex flex-col gap-2">
-            <span className="text-6xl font-light">20°</span>
-            <p className="text-base text-muted-foreground">Sunny</p>
-          </div>
-          <Sun className="size-20 text-muted-foreground/70 stroke-1" />
-        </section>
-      </header>
-
-      <section>
-        <h2 className="text-base font-semibold mb-4">7-Day Forecast</h2>
-        <ul className="flex flex-col">
-          {days.map((day) => (
-            <DaysListItem
-              key={day.day}
-              day={day.day}
-              maxTemp={day.maxTemp}
-              minTemp={day.minTemp}
-            />
-          ))}
-        </ul>
-      </section>
-    </div>
+export default function LocationPage({ params }: PageProps) {
+  return (
+    <Suspense fallback={<WeatherPlaceholder />}>
+      <LocationContent params={params} />
+    </Suspense>
   );
 }

@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { Sun } from "lucide-react";
+import { getCurrentTimeInTimezone } from "../lib/utils";
+import { WeatherIcon } from "../lib/types";
 
 interface LocationCardProps {
   slug: string;
   name: string;
   description: string;
   temperature: number;
+  timezone: string;
+  Icon: WeatherIcon;
+  isNight?: boolean;
 }
 
 export function LocationCard({
@@ -13,6 +17,9 @@ export function LocationCard({
   name,
   description,
   temperature,
+  timezone,
+  Icon,
+  isNight,
 }: LocationCardProps) {
   return (
     <Link
@@ -22,11 +29,13 @@ export function LocationCard({
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-base font-semibold">{name}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-muted-foreground">
+            {getCurrentTimeInTimezone(timezone)} · {description}
+          </p>
         </div>
         <div className="flex gap-6 items-center">
           <span className="text-4xl font-light">{temperature}°</span>
-          <Sun className="size-9 text-muted-foreground/70 stroke-[1.5]" />
+          <Icon className="size-12" isNight={isNight} />
         </div>
       </div>
     </Link>

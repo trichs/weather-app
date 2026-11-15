@@ -21,16 +21,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${inter.variable} antialiased bg-muted text-foreground`}
+        className={`${inter.variable} antialiased bg-linear-to-b from-slate-900 to-slate-950 text-foreground`}
       >
-        <div className="min-h-screen py-8 px-6">
-          <main className="max-w-xl mx-auto">
+        <header className="fixed top-0 left-0 w-full z-10">
+          <div className="max-w-xl mx-auto py-8 px-6">
             <h1 className="text-base font-semibold mb-6 text-muted-foreground hover:text-foreground">
               <Link href="/">Weather</Link>
             </h1>
-            {children}
-          </main>
-        </div>
+          </div>
+        </header>
+        <main className="min-h-screen">{children}</main>
       </body>
     </html>
   );

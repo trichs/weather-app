@@ -52,14 +52,16 @@ function LocationCardSkeleton({ name }: { name: string }) {
 
 export default function Home() {
   return (
-    <ul className="flex flex-col gap-4">
-      {locations.map((location) => (
-        <li key={location.slug}>
-          <Suspense fallback={<LocationCardSkeleton name={location.name} />}>
-            <WeatherLocationCard location={location} />
-          </Suspense>
-        </li>
-      ))}
-    </ul>
+    <div className="max-w-xl mx-auto py-24 px-6">
+      <ul className="flex flex-col gap-4">
+        {locations.map((location) => (
+          <li key={location.slug}>
+            <Suspense fallback={<LocationCardSkeleton name={location.name} />}>
+              <WeatherLocationCard location={location} />
+            </Suspense>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
